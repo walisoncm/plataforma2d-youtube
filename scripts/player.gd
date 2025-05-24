@@ -11,8 +11,10 @@ enum PlayerState {
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @export var max_jump_count = 2
+@export var max_speed = 200
+@export var acceleration = 400
+@export var deceleration = 400
 
-const SPEED = 80.0
 const JUMP_VELOCITY = -300.0
 
 var jump_count = 0
@@ -30,17 +32,18 @@ func _physics_process(delta: float) -> void:
 
 	match status:
 		PlayerState.IDLE:
-			idle_state()
+			idle_state(delta)
 		PlayerState.WALK:
-			walk_state()
+			walk_state(delta)
 		PlayerState.JUMP:
-			jump_state()
+			jump_state(delta)
 		PlayerState.FALL:
-			fall_state()
+			fall_state(delta)
 		PlayerState.DUCK:
-			duck_state()
+			duck_state(delta)
 
 	move_and_slide()
+
 
 func go_to_idle_state():
 	status = PlayerState.IDLE
@@ -80,8 +83,8 @@ func exit_duck_state():
 	collision_shape.position.y = 0
 
 
-func idle_state():
-	move()
+func idle_state(delta: float):
+	move(delta)
 
 	if is_on_floor():
 		if velocity.x != 0:
@@ -97,8 +100,8 @@ func idle_state():
 			return
 
 
-func walk_state():
-	move()
+func walk_state(delta: float):
+	move(delta)
 
 	if velocity.x == 0:
 		go_to_idle_state()
@@ -114,8 +117,8 @@ func walk_state():
 		return	
 
 
-func jump_state():
-	move()
+func jump_state(delta: float):
+	move(delta)
 
 	if Input.is_action_just_pressed("jump") && can_jump():
 		go_to_jump_state()
@@ -125,8 +128,9 @@ func jump_state():
 		go_to_fall_state()
 		return
 
-func fall_state():
-	move()
+
+func fall_state(delta: float):
+	move(delta)
 
 	if Input.is_action_just_pressed("jump") && can_jump():
 		go_to_jump_state()
@@ -146,7 +150,7 @@ func can_jump() -> bool:
 	return jump_count < max_jump_count or max_jump_count == 0
 
 
-func duck_state():
+func duck_state(_delta: float):
 	update_direction()
 
 	if Input.is_action_just_released("duck"):
@@ -155,16 +159,13 @@ func duck_state():
 		return
 
 
-func move():
+func move(delta: float):
 	update_direction()
 
-	if status == PlayerState.DUCK:
-		return;
-
-	if direction == 0:
-		velocity.x = move_toward(velocity.x, 0, SPEED)
+	if direction != 0:
+		velocity.x = move_toward(velocity.x, direction * max_speed, acceleration * delta)
 	else:
-		velocity.x = direction * SPEED
+		velocity.x = move_toward(velocity.x, 0, deceleration * delta)
 
 
 func update_direction() -> void:
