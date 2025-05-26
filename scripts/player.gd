@@ -14,10 +14,10 @@ enum PlayerState {
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @export var max_jump_count = 2
 @export var max_speed = 200
-@export var acceleration = 400
+@export var acceleration = 100
 @export var deceleration = 400
-@export var duck_deceleration = 600
-@export var slide_deceleration = 200
+@export var duck_deceleration = 500
+@export var slide_deceleration = 150
 
 const JUMP_VELOCITY = -300.0
 
@@ -123,7 +123,7 @@ func idle_state(delta: float) -> void:
 func walk_state(delta: float) -> void:
 	move(delta)
 
-	if velocity.x >= 100:
+	if velocity.x >= 200 || velocity.x <= -200:
 		go_to_run_state()
 		return
 
@@ -148,7 +148,7 @@ func walk_state(delta: float) -> void:
 func run_state(delta: float) -> void:
 	move(delta)
 
-	if velocity.x < 100:
+	if velocity.x < 100 && velocity.x > -100:
 		go_to_walk_state()
 		return
 
