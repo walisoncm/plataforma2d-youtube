@@ -13,7 +13,8 @@ enum PlayerState {
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @export var max_jump_count = 2
-@export var max_speed = 200
+@export var max_speed = 300
+@export var walk_speed = 100
 @export var acceleration = 100
 @export var deceleration = 400
 @export var duck_deceleration = 500
@@ -123,12 +124,12 @@ func idle_state(delta: float) -> void:
 func walk_state(delta: float) -> void:
 	move(delta)
 
-	if velocity.x >= 200 || velocity.x <= -200:
-		go_to_run_state()
-		return
-
 	if velocity.x == 0:
 		go_to_idle_state()
+		return
+
+	if Input.is_action_pressed("run") && abs(velocity.x) >= walk_speed:
+		go_to_run_state()
 		return
 
 	if Input.is_action_pressed("duck"):
@@ -148,7 +149,11 @@ func walk_state(delta: float) -> void:
 func run_state(delta: float) -> void:
 	move(delta)
 
-	if velocity.x < 100 && velocity.x > -100:
+	if abs(velocity.x) <= walk_speed:
+		go_to_walk_state()
+		return
+
+	if Input.is_action_just_released("run"):
 		go_to_walk_state()
 		return
 
@@ -222,10 +227,23 @@ func can_jump() -> bool:
 func move(delta: float):
 	update_direction()
 
+	var current_max_speed = walk_speed
+	var current_deceleration = deceleration
+
+	if status == PlayerState.RUN:
+		current_max_speed = max_speed
+
+	if status == PlayerState.JUMP:
+		current_deceleration = slide_deceleration
+
 	if direction != 0:
-		velocity.x = move_toward(velocity.x, direction * max_speed, acceleration * delta)
+		if abs(velocity.x) > current_max_speed:
+			velocity.x = move_toward(velocity.x, direction * current_max_speed, deceleration * delta)
+			return
+
+		velocity.x = move_toward(velocity.x, direction * current_max_speed, acceleration * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0, deceleration * delta)
+		velocity.x = move_toward(velocity.x, 0, current_deceleration * delta)
 
 
 func update_direction() -> void:
