@@ -12,6 +12,7 @@ enum PlayerState {
 
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
+
 @export var max_jump_count = 2
 @export var max_speed = 300
 @export var walk_speed = 100
@@ -21,13 +22,15 @@ enum PlayerState {
 @export var slide_deceleration = 150
 
 const JUMP_VELOCITY = -300.0
+const COLLIDER_DEFAULT = {"radius": 6, "height": 16, "offset": 0}
+const COLLIDER_SMALL = {"radius": 8, "height": 10, "offset": 3}
 
 var jump_count = 0
 var direction = 0
-var status: PlayerState
+var state: PlayerState
 
 func _ready() -> void:
-	go_to_idle_state()
+	change_state(PlayerState.IDLE)
 
 
 func _physics_process(delta: float) -> void:
@@ -35,215 +38,112 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
-	match status:
-		PlayerState.IDLE:
-			idle_state(delta)
-		PlayerState.WALK:
-			walk_state(delta)
-		PlayerState.RUN:
-			run_state(delta)
-		PlayerState.SLIDE:
-			slide_state(delta)
-		PlayerState.JUMP:
-			jump_state(delta)
-		PlayerState.FALL:
-			fall_state(delta)
-		PlayerState.DUCK:
-			duck_state(delta)
+	match state:
+		PlayerState.IDLE:  handle_idle(delta)
+		PlayerState.WALK:  handle_walk(delta)
+		PlayerState.RUN:   handle_run(delta)
+		PlayerState.SLIDE: handle_slide(delta)
+		PlayerState.JUMP:  handle_jump(delta)
+		PlayerState.FALL:  handle_fall(delta)
+		PlayerState.DUCK:  handle_duck(delta)
 
 	move_and_slide()
 
 
-func go_to_idle_state():
-	status = PlayerState.IDLE
-	anim.play("idle")
+func change_state(new_state: PlayerState) -> void:
+	state = new_state
+	anim.play(PlayerState.keys()[new_state].to_lower())
+
+	match new_state:
+		PlayerState.DUCK, PlayerState.SLIDE:
+			set_collider(COLLIDER_SMALL)
+		_:
+			set_collider(COLLIDER_DEFAULT)
 
 
-func go_to_walk_state():
-	status = PlayerState.WALK
-	anim.play("walk")
+func handle_idle(_delta: float) -> void:
+	move_horizontally(_delta)
+
+	if Input.is_action_just_pressed("jump"):
+		start_jump()
+	elif Input.is_action_pressed("duck"):
+		change_state(PlayerState.DUCK)
+	elif velocity.x != 0:
+		change_state(PlayerState.WALK)
 
 
-func go_to_run_state():
-	status = PlayerState.RUN
-	anim.play("run")
-
-
-func go_to_jump_state() -> void:
-	status = PlayerState.JUMP
-	anim.play("jump")
-
-	velocity.y = JUMP_VELOCITY
-	jump_count += 1
-
-
-func go_to_fall_state() -> void:
-	status = PlayerState.FALL
-	anim.play("fall")
-
-
-func go_to_duck_state() -> void:
-	status = PlayerState.DUCK
-	anim.play("duck")
-
-	set_small_collider()
-
-
-func exit_duck_state() -> void:
-	set_large_collider()
-
-
-func go_to_slide_state() -> void:
-	status = PlayerState.SLIDE
-	anim.play("slide")
-
-	set_small_collider()
-
-
-func exit_slide_state() -> void:
-	set_large_collider()
-
-
-func idle_state(delta: float) -> void:
-	move(delta)
-
-	if is_on_floor():
-		if velocity.x != 0:
-			go_to_walk_state()
-			return
-	
-		if Input.is_action_just_pressed("jump"):
-			go_to_jump_state()
-			return
-
-		if Input.is_action_pressed("duck"):
-			go_to_duck_state()
-			return
-
-
-func walk_state(delta: float) -> void:
-	move(delta)
+func handle_walk(delta: float) -> void:
+	move_horizontally(delta)
 
 	if velocity.x == 0:
-		go_to_idle_state()
-		return
+		change_state(PlayerState.IDLE)
+	elif Input.is_action_pressed("run") and abs(velocity.x) >= walk_speed:
+		change_state(PlayerState.RUN)
+	elif Input.is_action_pressed("duck"):
+		change_state(PlayerState.DUCK)
+	elif Input.is_action_just_pressed("jump"):
+		start_jump()
+	elif not is_on_floor():
+		start_fall()
 
-	if Input.is_action_pressed("run") && abs(velocity.x) >= walk_speed:
-		go_to_run_state()
-		return
-
-	if Input.is_action_pressed("duck"):
-		go_to_duck_state()
-		return
-
-	if Input.is_action_just_pressed("jump"):
-		go_to_jump_state()
-		return
-
-	if !is_on_floor():
-		jump_count += 1
-		go_to_fall_state()
-		return
-
-
-func run_state(delta: float) -> void:
-	move(delta)
+func handle_run(delta: float) -> void:
+	move_horizontally(delta)
 
 	if abs(velocity.x) <= walk_speed:
-		go_to_walk_state()
-		return
-
-	if Input.is_action_just_released("run"):
-		go_to_walk_state()
-		return
-
-	if Input.is_action_pressed("duck"):
-		go_to_slide_state()
-		return
-
-	if Input.is_action_just_pressed("jump"):
-		go_to_jump_state()
-		return
-
-	if !is_on_floor():
-		jump_count += 1
-		go_to_fall_state()
-		return
+		change_state(PlayerState.WALK)
+	elif Input.is_action_pressed("duck"):
+		change_state(PlayerState.SLIDE)
+	elif Input.is_action_just_pressed("jump"):
+		start_jump()
+	elif not is_on_floor():
+		start_fall()
 
 
-func jump_state(delta: float) -> void:
-	move(delta)
+func handle_jump(delta: float) -> void:
+	move_horizontally(delta)
 
 	if Input.is_action_just_pressed("jump") && can_jump():
-		go_to_jump_state()
-		return;
-
-	if velocity.y > 0:
-		go_to_fall_state()
-		return
+		start_jump()
+	elif velocity.y > 0:
+		start_fall()
 
 
-func fall_state(delta: float) -> void:
-	move(delta)
+func handle_fall(delta: float) -> void:
+	move_horizontally(delta)
 
 	if Input.is_action_just_pressed("jump") && can_jump():
-		go_to_jump_state()
-		return
-
-	if is_on_floor():
+		start_jump()
+	elif is_on_floor():
 		jump_count = 0
-
-		if velocity.x == 0:
-			go_to_idle_state()
-		else:
-			go_to_walk_state()
-		return
+		change_state(PlayerState.IDLE if velocity.x == 0 else PlayerState.WALK)
 
 
-func duck_state(_delta: float) -> void:
+func handle_duck(_delta: float) -> void:
 	update_direction()
-
 	velocity.x = move_toward(velocity.x, 0, duck_deceleration * _delta)
 
 	if Input.is_action_just_released("duck"):
-		exit_duck_state()
-		go_to_idle_state()
-		return
+		change_state(PlayerState.IDLE)
+	if Input.is_action_just_pressed("jump"):
+		start_jump()
 
 
-func slide_state(delta: float) -> void:
+func handle_slide(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0, slide_deceleration * delta)
 
 	if velocity.x == 0:
-		exit_slide_state()
-		go_to_idle_state()
-		return
+		change_state(PlayerState.IDLE)
 
 
-func can_jump() -> bool:
-	return jump_count < max_jump_count or max_jump_count == 0
-
-
-func move(delta: float):
+func move_horizontally(delta: float):
 	update_direction()
-
-	var current_max_speed = walk_speed
-	var current_deceleration = deceleration
-
-	if status == PlayerState.RUN:
-		current_max_speed = max_speed
-
-	if status == PlayerState.JUMP:
-		current_deceleration = slide_deceleration
+	var target_speed = walk_speed if state in [PlayerState.IDLE, PlayerState.WALK] else max_speed
 
 	if direction != 0:
-		if abs(velocity.x) > current_max_speed:
-			velocity.x = move_toward(velocity.x, direction * current_max_speed, deceleration * delta)
-			return
-
-		velocity.x = move_toward(velocity.x, direction * current_max_speed, acceleration * delta)
+		var accel = acceleration if abs(velocity.x) < target_speed else deceleration
+		velocity.x = move_toward(velocity.x, direction * target_speed, accel * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0, current_deceleration * delta)
+		velocity.x = move_toward(velocity.x, 0, deceleration * delta)
 
 
 func update_direction() -> void:
@@ -255,13 +155,21 @@ func update_direction() -> void:
 		anim.flip_h = true
 
 
-func set_small_collider():
-	collision_shape.shape.radius = 8
-	collision_shape.shape.height = 10
-	collision_shape.position.y = 3
+func can_jump() -> bool:
+	return jump_count < max_jump_count or max_jump_count == 0
 
 
-func set_large_collider():
-	collision_shape.shape.radius = 6
-	collision_shape.shape.height = 16
-	collision_shape.position.y = 0
+func start_jump() -> void:
+	jump_count += 1
+	velocity.y = JUMP_VELOCITY
+	change_state(PlayerState.JUMP)
+
+
+func start_fall() -> void:
+	change_state(PlayerState.FALL)
+
+
+func set_collider(collider: Dictionary) -> void:
+	collision_shape.shape.radius = collider.radius
+	collision_shape.shape.height = collider.height
+	collision_shape.position.y = collider.offset
