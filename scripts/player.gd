@@ -132,7 +132,10 @@ func handle_slide(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0, slide_deceleration * delta)
 
 	if velocity.x == 0:
-		change_state(PlayerState.IDLE)
+		if Input.is_action_pressed("duck"):
+			change_state(PlayerState.DUCK)
+		else:
+			change_state(PlayerState.IDLE)
 
 
 func move_horizontally(delta: float):
