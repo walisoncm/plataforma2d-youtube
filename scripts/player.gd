@@ -3,9 +3,11 @@ extends CharacterBody2D
 enum PlayerState {
 	IDLE,
 	WALK,
+	RUN,
 	JUMP,
 	FALL,
-	DUCK
+	DUCK,
+	SLIDE
 }
 
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
@@ -14,6 +16,8 @@ enum PlayerState {
 @export var max_speed = 200
 @export var acceleration = 400
 @export var deceleration = 400
+@export var duck_deceleration = 600
+@export var slide_deceleration = 200
 
 const JUMP_VELOCITY = -300.0
 
@@ -35,6 +39,10 @@ func _physics_process(delta: float) -> void:
 			idle_state(delta)
 		PlayerState.WALK:
 			walk_state(delta)
+		PlayerState.RUN:
+			run_state(delta)
+		PlayerState.SLIDE:
+			slide_state(delta)
 		PlayerState.JUMP:
 			jump_state(delta)
 		PlayerState.FALL:
@@ -55,7 +63,12 @@ func go_to_walk_state():
 	anim.play("walk")
 
 
-func go_to_jump_state():
+func go_to_run_state():
+	status = PlayerState.RUN
+	anim.play("run")
+
+
+func go_to_jump_state() -> void:
 	status = PlayerState.JUMP
 	anim.play("jump")
 
@@ -63,27 +76,34 @@ func go_to_jump_state():
 	jump_count += 1
 
 
-func go_to_fall_state():
+func go_to_fall_state() -> void:
 	status = PlayerState.FALL
 	anim.play("fall")
 
 
-func go_to_duck_state():
+func go_to_duck_state() -> void:
 	status = PlayerState.DUCK
 	anim.play("duck")
 
-	collision_shape.shape.radius = 8
-	collision_shape.shape.height = 10
-	collision_shape.position.y = 3
+	set_small_collider()
 
 
-func exit_duck_state():
-	collision_shape.shape.radius = 6
-	collision_shape.shape.height = 16
-	collision_shape.position.y = 0
+func exit_duck_state() -> void:
+	set_large_collider()
 
 
-func idle_state(delta: float):
+func go_to_slide_state() -> void:
+	status = PlayerState.SLIDE
+	anim.play("slide")
+
+	set_small_collider()
+
+
+func exit_slide_state() -> void:
+	set_large_collider()
+
+
+func idle_state(delta: float) -> void:
 	move(delta)
 
 	if is_on_floor():
@@ -100,11 +120,19 @@ func idle_state(delta: float):
 			return
 
 
-func walk_state(delta: float):
+func walk_state(delta: float) -> void:
 	move(delta)
+
+	if velocity.x >= 100:
+		go_to_run_state()
+		return
 
 	if velocity.x == 0:
 		go_to_idle_state()
+		return
+
+	if Input.is_action_pressed("duck"):
+		go_to_duck_state()
 		return
 
 	if Input.is_action_just_pressed("jump"):
@@ -114,10 +142,31 @@ func walk_state(delta: float):
 	if !is_on_floor():
 		jump_count += 1
 		go_to_fall_state()
-		return	
+		return
 
 
-func jump_state(delta: float):
+func run_state(delta: float) -> void:
+	move(delta)
+
+	if velocity.x < 100:
+		go_to_walk_state()
+		return
+
+	if Input.is_action_pressed("duck"):
+		go_to_slide_state()
+		return
+
+	if Input.is_action_just_pressed("jump"):
+		go_to_jump_state()
+		return
+
+	if !is_on_floor():
+		jump_count += 1
+		go_to_fall_state()
+		return
+
+
+func jump_state(delta: float) -> void:
 	move(delta)
 
 	if Input.is_action_just_pressed("jump") && can_jump():
@@ -129,7 +178,7 @@ func jump_state(delta: float):
 		return
 
 
-func fall_state(delta: float):
+func fall_state(delta: float) -> void:
 	move(delta)
 
 	if Input.is_action_just_pressed("jump") && can_jump():
@@ -146,17 +195,28 @@ func fall_state(delta: float):
 		return
 
 
-func can_jump() -> bool:
-	return jump_count < max_jump_count or max_jump_count == 0
-
-
-func duck_state(_delta: float):
+func duck_state(_delta: float) -> void:
 	update_direction()
+
+	velocity.x = move_toward(velocity.x, 0, duck_deceleration * _delta)
 
 	if Input.is_action_just_released("duck"):
 		exit_duck_state()
 		go_to_idle_state()
 		return
+
+
+func slide_state(delta: float) -> void:
+	velocity.x = move_toward(velocity.x, 0, slide_deceleration * delta)
+
+	if velocity.x == 0:
+		exit_slide_state()
+		go_to_idle_state()
+		return
+
+
+func can_jump() -> bool:
+	return jump_count < max_jump_count or max_jump_count == 0
 
 
 func move(delta: float):
@@ -175,3 +235,15 @@ func update_direction() -> void:
 		anim.flip_h = false
 	elif direction < 0:
 		anim.flip_h = true
+
+
+func set_small_collider():
+	collision_shape.shape.radius = 8
+	collision_shape.shape.height = 10
+	collision_shape.position.y = 3
+
+
+func set_large_collider():
+	collision_shape.shape.radius = 6
+	collision_shape.shape.height = 16
+	collision_shape.position.y = 0
