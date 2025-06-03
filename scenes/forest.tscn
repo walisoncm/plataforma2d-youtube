@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=4 uid="uid://c04hb3utugo1v"]
+[gd_scene load_steps=18 format=4 uid="uid://c04hb3utugo1v"]
 
 [ext_resource type="PackedScene" uid="uid://t703ayotwiho" path="res://entities/player.tscn" id="1_ercsu"]
 [ext_resource type="Texture2D" uid="uid://ckmt60fhfmia1" path="res://sprites/Seasonal Tilesets/2 - Autumn Forest/Terrain (16 x 16).png" id="2_j3csf"]
@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://rolebidgg2co" path="res://sprites/Seasonal Tilesets/2 - Autumn Forest/Background parts/1 - Leaf_top.png" id="9_3akcx"]
 [ext_resource type="PackedScene" uid="uid://qg4q5ni7xvv5" path="res://entities/camera.tscn" id="10_3h1w1"]
 [ext_resource type="PackedScene" uid="uid://cwo6i3kf6gqr3" path="res://entities/level_end.tscn" id="11_qavbn"]
+[ext_resource type="PackedScene" uid="uid://brfhqwh0xqi21" path="res://entities/skeleton.tscn" id="12_j3csf"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_boiax"]
 texture = ExtResource("2_j3csf")
@@ -180,7 +181,7 @@ size = Vector2(20, 160)
 [node name="Forest" type="Node2D"]
 
 [node name="Player" parent="." instance=ExtResource("1_ercsu")]
-position = Vector2(26, 184)
+position = Vector2(28, 183)
 
 [node name="Tiles" type="Node2D" parent="."]
 
@@ -274,5 +275,11 @@ position = Vector2(1208, 80)
 
 [node name="CollisionShape2D" parent="LevelEnd" index="0"]
 shape = SubResource("RectangleShape2D_64es3")
+
+[node name="Skeleton" parent="." instance=ExtResource("12_j3csf")]
+position = Vector2(643, 144)
+
+[node name="Skeleton2" parent="." instance=ExtResource("12_j3csf")]
+position = Vector2(445, 175)
 
 [editable path="LevelEnd"]

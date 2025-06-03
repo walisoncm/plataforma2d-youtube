@@ -8,11 +8,14 @@ enum EnemyState {
 
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
 @onready var hitbox: Area2D = $Hitbox
+@onready var wall_detector: RayCast2D = $WallDetector
+@onready var ground_detector: RayCast2D = $GroundDetector
 
-const SPEED = 300.0
+const SPEED = 30.0
 const JUMP_VELOCITY = -400.0
 
 var state: EnemyState
+var direction = 1
 
 func _ready() -> void:
 	change_state(EnemyState.WALK)
@@ -38,12 +41,14 @@ func change_state(new_state: EnemyState) -> void:
 
 
 func handle_walk(_delta: float) -> void:
-	pass
+	velocity.x = SPEED * direction
 
+	if wall_detector.is_colliding() or not ground_detector.is_colliding():
+		scale.x *= -1
+		direction *= -1
 
 func handle_dead(_delta: float) -> void:
-	pass
-
+	velocity.x = 0
 
 func take_damage() -> void:
 	change_state(EnemyState.DEAD)
