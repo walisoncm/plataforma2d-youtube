@@ -1,5 +1,6 @@
 extends CharacterBody2D
 
+
 enum PlayerState {
 	IDLE,
 	WALK,
@@ -7,7 +8,8 @@ enum PlayerState {
 	JUMP,
 	FALL,
 	DUCK,
-	SLIDE
+	SLIDE,
+	DEAD
 }
 
 @onready var anim: AnimatedSprite2D = $AnimatedSprite2D
@@ -46,6 +48,7 @@ func _physics_process(delta: float) -> void:
 		PlayerState.JUMP:  handle_jump(delta)
 		PlayerState.FALL:  handle_fall(delta)
 		PlayerState.DUCK:  handle_duck(delta)
+		PlayerState.DEAD:  handle_dead(delta)
 
 	move_and_slide()
 
@@ -138,6 +141,11 @@ func handle_slide(delta: float) -> void:
 			change_state(PlayerState.IDLE)
 
 
+func handle_dead(_delta: float) -> void:
+	velocity.x = 0
+	pass
+
+
 func move_horizontally(delta: float):
 	update_direction()
 	var target_speed = walk_speed if state in [PlayerState.IDLE, PlayerState.WALK] else max_speed
@@ -176,3 +184,12 @@ func set_collider(collider: Dictionary) -> void:
 	collision_shape.shape.radius = collider.radius
 	collision_shape.shape.height = collider.height
 	collision_shape.position.y = collider.offset
+
+
+func _on_hitbox_area_entered(area: Area2D) -> void:
+	if velocity.y > 0:
+		area.get_parent().take_damage()
+		jump_count = 0
+		start_jump()
+	else:
+		change_state(PlayerState.DEAD)

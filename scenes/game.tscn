@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=4 uid="uid://b4tn0muunr4h0"]
+[gd_scene load_steps=26 format=4 uid="uid://b4tn0muunr4h0"]
 
 [ext_resource type="PackedScene" uid="uid://t703ayotwiho" path="res://entities/player.tscn" id="1_trtic"]
 [ext_resource type="Texture2D" uid="uid://773hegwmkodh" path="res://sprites/Seasonal Tilesets/1 - Grassland/Terrain (16 x 16).png" id="2_ir15t"]
@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" uid="uid://qg4q5ni7xvv5" path="res://entities/camera.tscn" id="13_bhx41"]
 [ext_resource type="PackedScene" uid="uid://cwo6i3kf6gqr3" path="res://entities/level_end.tscn" id="14_qnb83"]
 [ext_resource type="PackedScene" uid="uid://7j87jnf086s0" path="res://scenes/tropic.tscn" id="15_ir15t"]
+[ext_resource type="PackedScene" uid="uid://brfhqwh0xqi21" path="res://entities/skeleton.tscn" id="16_ca42v"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_33cqm"]
 texture = ExtResource("2_ir15t")
@@ -259,5 +260,8 @@ next_level = ExtResource("15_ir15t")
 
 [node name="CollisionShape2D" parent="LevelEnd" index="0"]
 shape = SubResource("RectangleShape2D_ve786")
+
+[node name="Skeleton" parent="." instance=ExtResource("16_ca42v")]
+position = Vector2(143, 141)
 
 [editable path="LevelEnd"]
